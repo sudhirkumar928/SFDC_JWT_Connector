@@ -2,6 +2,12 @@
 
 This project demonstrates a clean Node.js structure for integrating with Salesforce using the JWT Bearer OAuth flow.
 
+```mermaid
+flowchart TD
+
+A[IMPORTANT NOTE: For the general POC just use the sfdcJWTConnector.js file in this repo to test things out with SSL cert genrated and external client app created in SFDC]
+```
+
 The application authenticates with Salesforce using a private key, retrieves a user based on FederationIdentifier using the Salesforce GraphQL API, and then performs operations as that user.
 
 ---
