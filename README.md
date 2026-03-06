@@ -276,7 +276,7 @@ run();
 Clone the repository and install dependencies.
 
 ```
-git clone https://github.com/your-username/your-repo-name.git
+git clone [https://github.com/sudhirkumar928/SFDC_JWT_Connector.git]
 cd your-repo-name
 npm install
 ```
