@@ -35,6 +35,177 @@ This architecture uses a dual-token pattern:
 
 ---
 
+## Setting Up an External Client App (ECA) in Salesforce
+
+Using an **External Client App (ECA)** is the modern and secure way to handle OAuth in Salesforce. It is more decoupled than the legacy Connected App approach.
+
+Follow these steps to configure your Salesforce Org for this Node.js integration.
+
+---
+
+### 1. Enable External Client Apps
+
+1. Go to **Setup** in Salesforce.
+2. In the **Quick Find** box, type **External Client App Manager**.
+3. If you see a **Get Started** or **Enable** button, click it. (In most 2026 Orgs, this is enabled by default.)
+
+---
+
+### 2. Create the App
+
+1. Click **New External Client App**.
+2. Fill out **Basic Information**:
+   - **External Client App Name**: `Portal_NodeJS_Sync`
+   - **Contact Email**: Your email
+3. Click **Save**.
+
+---
+
+### 3. Configure OAuth (JWT)
+
+1. Locate your app in the list, click the dropdown arrow, and select **Edit View**.
+2. Scroll to the **OAuth Settings** section.
+3. Check **Enable OAuth**.
+4. **Callback URL**: `https://localhost` (required but not used for JWT Bearer Flow)
+5. Check **Enable JWT Bearer Flow**.
+6. **Upload Certificate**: Click **Choose File** and upload `server.crt` generated with OpenSSL.
+7. **OAuth Scopes**: Select at least:
+   - `Access the Salesforce API (api)`
+   - `Perform requests at any time (refresh_token, offline_access)`
+8. Click **Save**.
+
+---
+
+### 4. Set Security Policies
+
+1. On the same External Client App page, find the **Policies** tab and click **Edit Policies**.
+2. **Permitted Users**: Select **Admin approved users are pre-authorized**.
+   - This allows JWT-signed requests to authenticate without prompting the user for credentials.
+3. Click **Save**.
+4. Scroll to **Profiles**, click **Manage Profiles**, and add:
+   - Your **Integration/Admin Profile** (for lookup)
+   - Your **Community/Customer Portal Profile** (for data sync)
+
+---
+
+### 5. Get Your Client ID
+
+1. Go back to **External Client App Manager**.
+2. Find your app and copy the **Consumer Key**.  
+   This will be your `SF_CLIENT_ID` in `.env`.
+
+---
+
+### 6. Deploy / Global OAuth Settings
+
+1. In the External Client App Manager, check the **App Status**.
+2. If it shows **Not Deployed**, select **Deploy** from the dropdown.
+3. Wait **2–5 minutes** for Salesforce to propagate the settings.
+
+---
+
+> Important: Missing any of these steps  especially Profiles or Permitted Users  is the most common cause of **invalid_grant** errors in JWT integrations.
+
+---
+
+## Generating JWT Certificates (OpenSSL)
+
+Salesforce JWT authentication requires a public/private key pair.
+
+The **private key** is used by the Node.js application to sign the JWT.  
+The **public certificate** is uploaded to the Salesforce External Client App.
+
+### Step 1  Generate Private Key
+
+```
+openssl genrsa -out server.key 2048
+```
+
+This creates a **2048-bit RSA private key**.
+
+---
+
+### Step 2  Generate Certificate Signing Request
+
+```
+openssl req -new -key server.key -out server.csr
+```
+
+You will be prompted to enter some information such as:
+
+```
+Country Name
+State
+Organization
+Common Name
+```
+
+These values are not critical for the JWT flow.
+
+---
+
+### Step 3  Generate Self-Signed Certificate
+
+```
+openssl x509 -req -sha256 -days 3650 -in server.csr -signkey server.key -out server.crt
+```
+
+This generates a **public certificate valid for 10 years**.
+
+Files generated:
+
+| File | Purpose |
+|-----|------|
+| server.key | Private key used to sign JWT tokens |
+| server.csr | Certificate signing request |
+| server.crt | Public certificate uploaded to Salesforce |
+
+---
+
+### Step 4  Upload Certificate to Salesforce
+
+1. Go to **Setup**
+2. Navigate to **External Client App Manager**
+3. Open your External Client App
+4. Click **Edit OAuth Settings**
+5. Upload the file:
+
+```
+server.crt
+```
+
+---
+
+### Step 5  Store Private Key in Environment Variable
+
+Your application uses the private key from environment variables.
+
+Example `.env`:
+
+```env
+SF_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+```
+
+To convert the key into the correct `.env` format you can run:
+
+```
+awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}' server.key
+```
+
+Then paste the output into your `.env` file.
+
+Example:
+
+```
+SF_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIEv...\n...\n-----END RSA PRIVATE KEY-----"
+```
+
+---
+
+The **private key must remain secret** because it is used to generate Salesforce authentication tokens.
+
+---
+
 ## Project Structure
 
 ```
